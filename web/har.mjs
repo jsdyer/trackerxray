@@ -6,6 +6,13 @@ const TYPE = /^[a-z0-9.+-]+\/[a-z0-9.+-]+$/i;
 const signalPath = /(?:^|\/)(?:telemetry|collect|analytics|beacon|pixel|track|tracking|metrics)(?:[.\/-]|$)/i;
 const signalQuery = /^(?:utm_\w+|gclid|fbclid|msclkid|dclid|_ga)$/i;
 
+const documentedServices = {
+  'google-analytics.com': { name: 'Google Analytics', source: 'https://developers.google.com/tag-platform/security/guides/csp#google_analytics' },
+  'googletagmanager.com': { name: 'Google Tag Manager', source: 'https://developers.google.com/tag-platform/security/guides/csp' },
+  'clarity.ms': { name: 'Microsoft Clarity', source: 'https://learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-csp' },
+  'cloudflareinsights.com': { name: 'Cloudflare Web Analytics', source: 'https://developers.cloudflare.com/web-analytics/data-metrics/data-origin-and-collection/' },
+};
+
 export const maxFileBytes = SIZE;
 const finite = x => typeof x === 'number' && Number.isFinite(x) && x >= 0;
 const mime = x => {
@@ -52,6 +59,8 @@ export function readHar(value) {
     const url = webURL(request?.url);
     if (!url) { skipped++; continue; }
     const host = url.hostname.toLowerCase().replace(/\.$/, '');
+    const domain = domainOf(host);
+    const service = Object.hasOwn(documentedServices, domain) ? documentedServices[domain] : null;
     const response = entry.response || {};
     const post = request.postData;
     const requestHeaders = names(request.headers);
@@ -72,7 +81,7 @@ export function readHar(value) {
       (cookieNames.length || responseCookieNames.length
         || [...requestHeaders, ...responseHeaders].some(x => /^(?:set-)?cookie$/i.test(x))) && 'Cookie metadata present'].filter(Boolean);
     rows.push({
-      host, domain: domainOf(host),
+      host, domain, service,
       method: typeof request.method === 'string' && /^[A-Z!#$%&'*+.^_`|~-]{1,25}$/i.test(request.method) ? request.method.toUpperCase() : 'Unknown',
       resource,
       status: Number.isInteger(response.status) && response.status >= 0 && response.status < 600 ? response.status : null,
@@ -96,7 +105,7 @@ export function summarize(rows, siteHost) {
   const site = domainOf(siteHost);
   const hosts = new Map();
   for (const row of rows) {
-    if (!hosts.has(row.host)) hosts.set(row.host, { host: row.host, domain: row.domain, same: row.domain === site, count: 0, signals: 0 });
+    if (!hosts.has(row.host)) hosts.set(row.host, { host: row.host, domain: row.domain, service: row.service?.name || null, same: row.domain === site, count: 0, signals: 0 });
     const host = hosts.get(row.host);
     host.count++;
     if (row.observations.length) host.signals++;

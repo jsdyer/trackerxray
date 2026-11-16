@@ -112,7 +112,8 @@ function renderOverview() {
     });
     button.setAttribute('aria-pressed', String(selectedHost === host.host));
     const row = el('div', null, 'barrow');
-    row.append(el('span', `${host.host} · ${host.same ? 'same site' : 'other site'}`), el('span', number.format(host.count), 'meta'));
+    const identity = [host.host, host.same ? 'same site' : 'other site', host.service].filter(Boolean).join(' · ');
+    row.append(el('span', identity), el('span', number.format(host.count), 'meta'));
     const bar = el('meter');
     bar.max = stats.hosts[0].count;
     bar.value = host.count;
@@ -130,7 +131,7 @@ function renderRows() {
   const rows = data.rows.filter(row => {
     if (selectedHost && row.host !== selectedHost) return false;
     if (scope && (scope === 'same') !== (row.domain === chosen)) return false;
-    return !query || [row.host, row.method, row.resource, ...row.requestHeaders, ...row.responseHeaders, ...row.queryNames]
+    return !query || [row.host, row.service?.name || '', row.method, row.resource, ...row.requestHeaders, ...row.responseHeaders, ...row.queryNames]
       .some(value => value.toLowerCase().includes(query));
   });
   if ($('sort').value === 'slow') rows.sort((a, b) => (b.duration ?? -1) - (a.duration ?? -1));
@@ -168,7 +169,14 @@ function renderRows() {
 const showNames = values => values.length ? values.join(', ') : 'None listed';
 function inspect(row) {
   $('detail-title').textContent = row.host;
+  const service = row.service ? el('a', row.service.name) : 'No match in the built-in list';
+  if (row.service) {
+    service.href = row.service.source;
+    service.target = '_blank';
+    service.rel = 'noopener noreferrer';
+  }
   const cases = [
+    ['Documented service', service],
     ['Request', [row.method, row.resource].filter(Boolean).join(' · ')],
     ['Site relationship', row.domain === domainOf(site) ? 'Same registrable domain' : 'Different registrable domain'],
     ['HTTP status', row.status == null ? 'Unavailable' : row.status === 0 ? 'No HTTP status recorded' : row.status],
@@ -184,7 +192,11 @@ function inspect(row) {
     ['Timing phases', row.phases.length ? row.phases.map(([key, value]) => `${key} ${ms(value)}`).join(' · ') : 'None listed'],
     ['Review signals', row.observations.length ? row.observations.join(' · ') : 'None detected'],
   ];
-  $('detail-fields').replaceChildren(...cases.flatMap(([label, value]) => [el('dt', label), el('dd', value)]));
+  $('detail-fields').replaceChildren(...cases.flatMap(([label, value]) => {
+    const description = el('dd');
+    description.append(value);
+    return [el('dt', label), description];
+  }));
   $('detail').showModal();
 }
 

@@ -37,3 +37,9 @@ test('omit raw values, retain timing and metadata, skip unsupported URLs', () =>
 });
 
 test('reject JSON that is not an HTTP archive', () => assert.throws(() => readHar({ log: {} }), /log.entries/));
+
+test('recognizes documented provider domains without matching lookalikes', () => {
+  const urls = ['https://region1.google-analytics.com/g/collect', 'https://google-analytics.com.example.org/', 'https://c.clarity.ms/c.gif'];
+  const output = readHar({ log: { entries: urls.map((url) => ({ request: { url } })) } });
+  assert.deepEqual(output.rows.map((row) => row.service?.name), ['Google Analytics', undefined, 'Microsoft Clarity']);
+});

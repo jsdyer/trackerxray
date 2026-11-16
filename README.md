@@ -9,7 +9,9 @@
 3. Click a host to review its requests. Open **Inspect** for recorded body size and type, form field names, query parameter names, header names, cookie names, and timing phases. Raw request/response bodies, URL paths, query values, credentials, and header/cookie values are omitted.
 4. Export a host-level summary if needed. It includes host names; review before sharing.
 
-The app groups by registrable domain using the Public Suffix List, including private suffixes. Different registrable domains can have the same owner. Metrics-looking paths and parameter names are signals for review, not a tracker verdict. A HAR describes captured network activity. It cannot establish what data a script read, whether clipboard data was collected, or what was happening outside the recorded session.
+The app groups by registrable domain using the Public Suffix List, including private suffixes. Different registrable domains can have the same owner. Known service names link to provider documentation for exact registrable-domain matches. Metrics-looking paths and parameter names can guide your review. A HAR describes captured network activity. It cannot establish what data a script read, whether clipboard data was collected, or what was happening outside the recorded session.
+
+The built-in list has four services. [Google Analytics](https://developers.google.com/tag-platform/security/guides/csp#google_analytics) · [Google Tag Manager](https://developers.google.com/tag-platform/security/guides/csp) · [Microsoft Clarity](https://learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-csp) · [Cloudflare Web Analytics](https://developers.cloudflare.com/web-analytics/data-metrics/data-origin-and-collection/)
 
 ## Build and test
 
