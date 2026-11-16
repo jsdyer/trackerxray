@@ -1,0 +1,35 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#17201c">
+<meta name="description" content="Inspect a browser network capture locally. Map unexpected external requests, request metadata and timing.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' blob:; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<title>Tracker X-Ray · CoolCode</title><link rel="stylesheet" href="./style.css"><script src="./app.mjs" type="module"></script>
+</head><body>
+<header class="mast"><div class="wrap"><a href="../">CoolCode.ca</a><span>Network inspection</span></div></header>
+<section class="hero"><div class="wrap hero-inner">
+<div><span class="eyebrow">Browser network forensics</span><h1>Tracker X-Ray</h1><p class="lede">Find the domains, cookies and request patterns behind the page you captured.</p></div>
+<div class="local"><strong>Your capture stays in this tab.</strong><p>Header, cookie and body values are omitted. Captured URLs are never opened and the raw HAR is never uploaded.</p></div>
+</div></section>
+<main class="wrap">
+<section class="box" aria-label="Open a network capture"><div id="drop" class="drop">
+<h2>Open a HAR file</h2><p class="muted">In Chrome DevTools, open Network, reload, then choose <strong>Export HAR (sanitized)</strong>. A HAR captures only what happened during the recorded session.</p>
+<div class="row"><button id="choose" class="primary">Choose HAR</button><input id="open" type="file" accept=".har,.json,application/json" hidden><button id="sample">Try a synthetic capture</button><button id="clear" hidden>Clear capture</button></div>
+</div><p id="status" class="status" role="status">Drop a HAR here or try the synthetic example.</p></section>
+<section id="report" hidden>
+<div class="box"><div class="row between"><h2 id="capture-title">Capture overview</h2><button id="export">Export summary JSON</button></div>
+<div class="controls"><label class="field grow">Site to compare against<input id="site" type="text" placeholder="example.ca" maxlength="220" spellcheck="false"></label><button id="apply-site">Set site</button></div>
+<p class="notes muted" id="site-note">Requests are grouped by registrable domain, including private suffixes. Different sites are candidates for review, regardless of who operates them.</p>
+<div class="stats" id="stats"></div></div>
+<div class="box"><h2>Contacted hosts</h2><p class="muted">Select a host to filter requests below. Bars show request counts, not the amount of data sent.</p><div id="hosts" class="chart"></div></div>
+<div class="box"><div class="row between"><h2>Captured requests</h2><span id="result-count" class="meta"></span></div>
+<div class="controls"><label class="field grow">Filter by host, method or header name<input id="query" type="search" autocomplete="off"></label><label class="field">Relationship<select id="scope"><option value="">All hosts</option><option value="external">Other sites</option><option value="same">Same site</option></select></label><label class="field">Order<select id="sort"><option value="recorded">Capture order</option><option value="slow">Longest duration</option><option value="size">Largest response size</option></select></label><button id="reset-filter">Reset filters</button></div>
+<p id="host-selection" class="notes" hidden></p>
+<div class="scroll"><table><thead><tr><th>Host</th><th>Request</th><th>Status</th><th class="right">Start / duration</th><th class="right">Response</th><th>Details</th></tr></thead><tbody id="requests"></tbody></table></div>
+<div class="row pager"><button id="prev">Previous</button><span id="page" class="meta"></span><button id="next">Next</button></div>
+<p class="notes muted">Cookie names and analytics-like signals show what to review. A network request alone does not establish the purpose of a request or prove that clipboard or other personal data was collected.</p>
+</div></section>
+<noscript>Enable JavaScript to parse files locally.</noscript></main>
+<dialog id="detail" aria-labelledby="detail-title"><form method="dialog"><div class="row between"><h2 id="detail-title"></h2><button>Close</button></div></form>
+<dl class="details" id="detail-fields"></dl></dialog>
+<footer class="footer"><div class="wrap"><span>Tracker X-Ray · local HAR analysis</span><a href="https://developer.chrome.com/docs/devtools/network/reference/#save-as-har">Chrome HAR export</a><a href="https://github.com/jsdyer/trackerxray">Source code</a><a href="./vendor/TLDTS-LICENSE">Domain parser licence</a></div></footer>
+</body></html>
