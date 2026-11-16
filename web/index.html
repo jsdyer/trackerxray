@@ -3,7 +3,7 @@
 <meta name="theme-color" content="#17201c">
 <meta name="description" content="Inspect a browser network capture locally. Map unexpected external requests, request metadata and timing.">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' blob:; worker-src 'self'; base-uri 'none'; form-action 'none'">
-<title>Tracker X-Ray · CoolCode</title><link rel="stylesheet" href="./style.css"><script src="./app.mjs" type="module"></script>
+<title>Tracker X-Ray · CoolCode</title><link rel="stylesheet" href="./style.css"><script src="./app.mjs" type="module"></script><script src="./comparison.mjs" type="module"></script>
 </head><body>
 <header class="mast"><div class="wrap"><a href="../">CoolCode.ca</a><span>Network inspection</span></div></header>
 <section class="hero"><div class="wrap hero-inner">
@@ -15,6 +15,26 @@
 <h2>Open a HAR file</h2><p class="muted">In Chrome DevTools, open Network, reload, then choose <strong>Export HAR (sanitized)</strong>. A HAR captures only what happened during the recorded session.</p>
 <div class="row"><button id="choose" class="primary">Choose HAR</button><input id="open" type="file" accept=".har,.json,application/json" hidden><button id="sample">Try a synthetic capture</button><button id="clear" hidden>Clear capture</button></div>
 </div><p id="status" class="status" role="status">Drop a HAR here or try the synthetic example.</p></section>
+<details class="box comparison" id="comparison"><summary>Compare two HAR captures</summary>
+<p class="muted">For a cookie consent comparison, use the same starting page and similar recording durations. Caching and page activity can also affect request counts.</p>
+<div class="grid">
+  <div class="compare-slot"><label class="field" for="compare-before">Before HAR<input id="compare-before" type="file" accept=".har,.json,application/json" aria-describedby="compare-before-label"></label><p id="compare-before-label" class="meta">No file selected</p></div>
+  <div class="compare-slot"><label class="field" for="compare-after">After HAR<input id="compare-after" type="file" accept=".har,.json,application/json" aria-describedby="compare-after-label"></label><p id="compare-after-label" class="meta">No file selected</p></div>
+</div>
+<div class="row"><button id="compare-sample">Try a synthetic pair</button><button id="compare-clear" disabled>Clear comparison</button></div>
+<p id="compare-status" class="status" role="status">Load one file for each side.</p>
+<section id="compare-report" aria-label="Capture comparison results" hidden>
+  <div id="compare-stats" class="stats"></div>
+  <p id="compare-context" class="notes muted"></p>
+  <div class="controls">
+    <label class="field grow">Find a domain or host<input id="compare-query" type="search" autocomplete="off"></label>
+    <label class="field">Show<select id="compare-filter"><option value="changes">All changes</option><option value="added">New domains</option><option value="removed">Missing domains</option><option value="count">Request count changes</option><option value="hosts">Host changes only</option><option value="all">All domains</option></select></label>
+    <button id="compare-export">Export comparison JSON</button>
+  </div>
+  <p class="notes muted">Requests are grouped by registrable domain. Expand a domain to see host counts. The export includes domain names, hostnames and counts.</p>
+  <div class="scroll" tabindex="0" role="region" aria-label="Domain comparison table"><table><thead><tr><th scope="col">Domain</th><th scope="col">Change</th><th scope="col" class="right">Before</th><th scope="col" class="right">After</th><th scope="col" class="right">Difference</th></tr></thead><tbody id="compare-rows"></tbody></table></div>
+  <div class="row pager"><button id="compare-prev">Previous</button><span id="compare-page" class="meta" aria-live="polite"></span><button id="compare-next">Next</button></div>
+</section></details>
 <section id="report" hidden>
 <div class="box"><div class="row between"><h2 id="capture-title">Capture overview</h2><button id="export">Export summary JSON</button></div>
 <div class="controls"><label class="field grow">Site to compare against<input id="site" type="text" placeholder="example.ca" maxlength="220" spellcheck="false"></label><button id="apply-site">Set site</button></div>

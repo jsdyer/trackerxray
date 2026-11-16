@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { domainOf, parseSite, readHar, summarize } from '../dist/har.mjs';
+import { captureCounts, compareCaptures } from '../dist/compare.mjs';
 
 test('group by registrable domain with private suffixes', () => {
   assert.equal(domainOf('shop.example.co.uk'), 'example.co.uk');
@@ -42,4 +43,22 @@ test('recognizes documented provider domains without matching lookalikes', () =>
   const urls = ['https://region1.google-analytics.com/g/collect', 'https://google-analytics.com.example.org/', 'https://c.clarity.ms/c.gif'];
   const output = readHar({ log: { entries: urls.map((url) => ({ request: { url } })) } });
   assert.deepEqual(output.rows.map((row) => row.service?.name), ['Google Analytics', undefined, 'Microsoft Clarity']);
+});
+
+test('compares valid requests by registrable domain and preserves changes within a domain', () => {
+  const capture = urls => captureCounts(readHar({ log: { entries: urls.map(url => ({ request: { url } })) } }));
+  const before = capture(['https://page.example.ca/private-path?x=private-value', 'https://old.example.net', 'https://keep.example.org', 'https://gone.github.io']);
+  const after = capture(['https://page.example.ca', 'https://new.example.net', 'https://keep.example.org', 'https://keep.example.org', 'https://fresh.github.io', 'file:///private-file']);
+  const report = compareCaptures(before, after);
+  assert.equal(report.delta, 1);
+  assert.equal(report.before.site, 'example.ca');
+  assert.equal(report.after.skipped, 1);
+  assert.equal(report.addedDomains, 1);
+  assert.equal(report.removedDomains, 1);
+  assert.deepEqual(report.domains.map(({ domain, change, delta }) => [domain, change, delta]), [
+    ['fresh.github.io', 'added', 1], ['gone.github.io', 'removed', -1], ['example.org', 'count', 1],
+    ['example.net', 'hosts', 0], ['example.ca', 'unchanged', 0],
+  ]);
+  assert.deepEqual(report.domains[3].hosts.map(({ host, delta }) => [host, delta]), [['new.example.net', 1], ['old.example.net', -1]]);
+  assert.doesNotMatch(JSON.stringify(report), /private-|https:/);
 });

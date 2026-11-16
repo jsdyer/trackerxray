@@ -10,6 +10,8 @@
 4. Narrow requests by review signals, request body, cookie metadata, documented service, or HTTP error. Search also covers field and cookie names.
 5. Export a host-level summary or the matching requests as JSON. The request export includes hostnames and field names; review these before sharing.
 
+Open **Compare two HAR captures** and choose a Before and an After file. The summary shows the request difference and domains that appeared in only one capture. Expand a domain to see changes to its individual hosts. Use the filters to find new domains, missing domains, request-count changes or host changes within the same domain. The comparison export includes hostnames, domain names and counts. For cookie consent research, capture the same starting page for similar durations and consider differences in caching or page activity.
+
 The app groups by registrable domain using the Public Suffix List, including private suffixes. Different registrable domains can have the same owner. Known service names link to provider documentation for exact registrable-domain matches. Metrics-looking paths and parameter names can guide your review. A HAR describes captured network activity. It cannot establish what data a script read, whether clipboard data was collected, or what was happening outside the recorded session.
 
 The built-in list has four services. [Google Analytics](https://developers.google.com/tag-platform/security/guides/csp#google_analytics) · [Google Tag Manager](https://developers.google.com/tag-platform/security/guides/csp) · [Microsoft Clarity](https://learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-csp) · [Cloudflare Web Analytics](https://developers.cloudflare.com/web-analytics/data-metrics/data-origin-and-collection/)

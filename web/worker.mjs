@@ -1,4 +1,5 @@
 import { readHar, maxFileBytes } from './har.mjs';
+import { captureCounts } from './compare.mjs';
 
 self.addEventListener('message', async ({ data }) => {
   try {
@@ -7,6 +8,7 @@ self.addEventListener('message', async ({ data }) => {
     let parsed;
     try { parsed = JSON.parse((await file.text()).replace(/^\uFEFF/, '')); }
     catch { throw new Error('Could not parse this file as JSON. Export a .har file from the browser Network panel.'); }
-    self.postMessage({ result: readHar(parsed) });
+    const capture = readHar(parsed);
+    self.postMessage({ result: data.compare ? captureCounts(capture) : capture });
   } catch (error) { self.postMessage({ error: error.message || 'Could not read this capture.' }); }
 });
