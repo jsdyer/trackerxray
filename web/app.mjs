@@ -54,6 +54,7 @@ function openResult(result, label) {
   $('query').value = '';
   $('scope').value = '';
   $('sort').value = 'recorded';
+  $('characteristic').value = '';
   selectedHost = '';
   page = 0;
   renderOverview();
@@ -124,18 +125,30 @@ function renderOverview() {
   if (stats.hosts.length > limit) $('hosts').append(el('p', `Showing ${limit} of ${number.format(stats.hosts.length)} hosts. Search any host in the requests table.`, 'chart-caption'));
 }
 
-function renderRows() {
+function matchedRows() {
   const query = $('query').value.trim().toLowerCase();
   const scope = $('scope').value;
+  const characteristic = $('characteristic').value;
   const chosen = domainOf(site);
   const rows = data.rows.filter(row => {
     if (selectedHost && row.host !== selectedHost) return false;
     if (scope && (scope === 'same') !== (row.domain === chosen)) return false;
-    return !query || [row.host, row.service?.name || '', row.method, row.resource, ...row.requestHeaders, ...row.responseHeaders, ...row.queryNames]
+    if (characteristic === 'signal' && !row.observations.length) return false;
+    if (characteristic === 'body' && !row.hasPayload) return false;
+    if (characteristic === 'cookies' && !row.cookieNames.length && !row.responseCookieNames.length && !row.requestHeaders.some(name => /^cookie$/i.test(name)) && !row.responseHeaders.some(name => /^set-cookie$/i.test(name))) return false;
+    if (characteristic === 'service' && !row.service) return false;
+    if (characteristic === 'error' && !(row.status == null || row.status === 0 || row.status >= 400)) return false;
+    return !query || [row.host, row.service?.name || '', row.method, row.resource, ...row.requestHeaders, ...row.responseHeaders, ...row.queryNames, ...row.cookieNames, ...row.responseCookieNames, ...row.payloadNames, ...row.observations]
       .some(value => value.toLowerCase().includes(query));
   });
   if ($('sort').value === 'slow') rows.sort((a, b) => (b.duration ?? -1) - (a.duration ?? -1));
   if ($('sort').value === 'size') rows.sort((a, b) => (b.size ?? -1) - (a.size ?? -1));
+  return rows;
+}
+
+function renderRows() {
+  const rows = matchedRows();
+  const chosen = domainOf(site);
   const pages = Math.max(1, Math.ceil(rows.length / pageSize));
   page = Math.min(page, pages - 1);
   $('result-count').textContent = `${number.format(rows.length)} matched`;
@@ -217,6 +230,17 @@ function download() {
   link.href = url; link.download = 'trackerxray-summary.json'; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+function downloadRequests() {
+  const content = {
+    format: 'trackerxray-request-metadata-v1',
+    comparisonSite: site,
+    requests: matchedRows(),
+  };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(content, null, 2)], { type: 'application/json' }));
+  const link = el('a');
+  link.href = url; link.download = 'trackerxray-requests.json'; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 function sample() {
   clearCapture();
   const seed = Date.UTC(2024, 9, 3);
@@ -245,11 +269,12 @@ $('open').addEventListener('change', event => openFile(event.target.files[0]));
 $('sample').addEventListener('click', sample);
 $('clear').addEventListener('click', clearCapture);
 $('export').addEventListener('click', download);
+$('export-requests').addEventListener('click', downloadRequests);
 $('apply-site').addEventListener('click', applySite);
 $('site').addEventListener('keydown', event => { if (event.key === 'Enter') applySite(); });
-for (const id of ['query', 'scope', 'sort']) $(id).addEventListener('input', () => { page = 0; renderRows(); });
+for (const id of ['query', 'scope', 'sort', 'characteristic']) $(id).addEventListener('input', () => { page = 0; renderRows(); });
 $('reset-filter').addEventListener('click', () => {
-  $('query').value = ''; $('sort').value = 'recorded'; $('scope').value = '';
+  $('query').value = ''; $('sort').value = 'recorded'; $('scope').value = ''; $('characteristic').value = '';
   selectedHost = ''; page = 0;
   renderOverview(); renderRows();
 });

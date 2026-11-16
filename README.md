@@ -7,7 +7,8 @@
 1. In Chrome DevTools, open Network, reload the page, and choose **Export HAR (sanitized)**. A sanitized HAR may omit Cookie, Set-Cookie, and Authorization values and headers. [Chrome documentation](https://developer.chrome.com/docs/devtools/network/reference/#save-as-har)
 2. Drop the capture on Tracker X-Ray. Check the inferred comparison site and adjust it if the HAR started on another page or follows multiple sites.
 3. Click a host to review its requests. Open **Inspect** for recorded body size and type, form field names, query parameter names, header names, cookie names, and timing phases. Raw request/response bodies, URL paths, query values, credentials, and header/cookie values are omitted.
-4. Export a host-level summary if needed. It includes host names; review before sharing.
+4. Narrow requests by review signals, request body, cookie metadata, documented service, or HTTP error. Search also covers field and cookie names.
+5. Export a host-level summary or the matching requests as JSON. The request export includes hostnames and field names; review these before sharing.
 
 The app groups by registrable domain using the Public Suffix List, including private suffixes. Different registrable domains can have the same owner. Known service names link to provider documentation for exact registrable-domain matches. Metrics-looking paths and parameter names can guide your review. A HAR describes captured network activity. It cannot establish what data a script read, whether clipboard data was collected, or what was happening outside the recorded session.
 
