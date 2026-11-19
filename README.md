@@ -1,6 +1,6 @@
 # Tracker X-Ray
 
-[Open on CoolCode.ca](https://coolcode.ca/trackerxray/). Use a browser HAR (HTTP Archive) to review which hosts a page contacted, when requests started, which cookie and header names appear, and what payload metadata was captured. The file is parsed in a browser worker and is never uploaded. Try the synthetic capture to explore without a file.
+[Open on CoolCode.ca](https://coolcode.ca/trackerxray/). Use a browser HAR (HTTP Archive) to review which hosts a page contacted, when requests started, which cookie and header names appear, and what payload metadata was captured. The file is parsed in a browser worker and is never uploaded. Choose **Inspect this page’s load** to inspect completed same-origin browser timing entries from the open tab, including its navigation, scripts and styles. It reads the browser’s existing measurements. No URLs are replayed. Timings end at response completion and sizes use the encoded HTTP body when available. The browser timing API does not expose request methods, cookies, headers or request bodies. The source is identified in JSON exports.
 
 ## Use
 
@@ -25,3 +25,8 @@ python3 -m http.server --directory dist 8000
 ```
 
 Python 3 uses the npm registry to fetch the pinned, SHA-512-checked [tldts](https://github.com/remusao/tldts) distribution with its MIT licence. The bundled trie is based on the [Public Suffix List](https://publicsuffix.org/list/). No dependencies are fetched during browser use. The app does not redistribute Tracker Radar data or contact a captured domain. Static assets work under a Pages project subdirectory. Browser limits are 128 MB and 200,000 entries per file. Missing metadata is displayed as unavailable rather than treated as a measured zero.
+
+
+<!-- coolcode:guide -->
+Inspect this page’s load to see the requests your browser measured for Tracker X-Ray itself. To compare another site before and after a consent choice, export two sanitized HAR files from the same starting page and open them under Compare two HAR captures.
+<!-- /coolcode:guide -->

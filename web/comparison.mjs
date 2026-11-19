@@ -1,5 +1,5 @@
-import { maxFileBytes, readHar } from './har.mjs';
-import { captureCounts, compareCaptures } from './compare.mjs';
+import { maxFileBytes } from './har.mjs';
+import { compareCaptures } from './compare.mjs';
 
 const $ = id => document.getElementById(`compare-${id}`);
 const sides = ['before', 'after'];
@@ -161,19 +161,6 @@ function load(side, file) {
   }
 }
 
-function sample() {
-  clear();
-  const same = 'https://museum.example.ca/';
-  const before = [same, 'https://old.media.example.net/', 'https://stats.example.org/', 'https://retired.example.com/'];
-  const after = [same, 'https://new.media.example.net/', 'https://stats.example.org/', 'https://stats.example.org/again', 'https://events.example.edu/'];
-  for (const [side, urls] of [['before', before], ['after', after]]) {
-    const entries = urls.map(url => ({ _resourceType: 'document', request: { url } }));
-    setCapture(side, captureCounts(readHar({ log: { entries } })), 'Synthetic capture · ');
-  }
-  $('clear').disabled = false;
-  update();
-}
-
 function download() {
   const url = URL.createObjectURL(new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' }));
   const link = element('a');
@@ -185,7 +172,6 @@ function download() {
 
 for (const side of sides) $(side).addEventListener('change', event => load(side, event.target.files[0]));
 for (const id of ['query', 'filter']) $(id).addEventListener('input', () => { page = 0; render(); });
-$('sample').addEventListener('click', sample);
 $('clear').addEventListener('click', clear);
 $('export').addEventListener('click', download);
 $('prev').addEventListener('click', () => { page--; render(); });

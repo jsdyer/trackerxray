@@ -12,16 +12,17 @@
 </div></section>
 <main class="wrap">
 <section class="box" aria-label="Open a network capture"><div id="drop" class="drop">
-<h2>Open a HAR file</h2><p class="muted">In Chrome DevTools, open Network, reload, then choose <strong>Export HAR (sanitized)</strong>. A HAR captures only what happened during the recorded session.</p>
-<div class="row"><button id="choose" class="primary">Choose HAR</button><input id="open" type="file" accept=".har,.json,application/json" hidden><button id="sample">Try a synthetic capture</button><button id="clear" hidden>Clear capture</button></div>
-</div><p id="status" class="status" role="status">Drop a HAR here or try the synthetic example.</p></section>
+<h2>Open a network capture</h2><p class="muted">In Chrome DevTools, open Network, reload, then choose <strong>Export HAR (sanitized)</strong>. A HAR captures only what happened during the recorded session.</p>
+<div class="row"><button id="choose" class="primary">Choose HAR</button><input id="open" type="file" accept=".har,.json,application/json" hidden><button id="measure">Inspect this page’s load</button><button id="clear" hidden>Clear capture</button></div>
+</div><p id="status" class="status" role="status">Open a HAR or inspect the resources this page has already loaded.</p></section>
 <details class="box comparison" id="comparison"><summary>Compare two HAR captures</summary>
-<p class="muted">For a cookie consent comparison, use the same starting page and similar recording durations. Caching and page activity can also affect request counts.</p>
+<p class="muted">Compare how many requests each domain received in your two saved HAR files.</p>
 <div class="grid">
   <div class="compare-slot"><label class="field" for="compare-before">Before HAR<input id="compare-before" type="file" accept=".har,.json,application/json" aria-describedby="compare-before-label"></label><p id="compare-before-label" class="meta">No file selected</p></div>
   <div class="compare-slot"><label class="field" for="compare-after">After HAR<input id="compare-after" type="file" accept=".har,.json,application/json" aria-describedby="compare-after-label"></label><p id="compare-after-label" class="meta">No file selected</p></div>
 </div>
-<div class="row"><button id="compare-sample">Try a synthetic pair</button><button id="compare-clear" disabled>Clear comparison</button></div>
+<p class="meta">To compare a consent choice, open Network in your browser’s developer tools, reload the same site and export a sanitized HAR. Clear the Network log, make the choice and record a second load over the same interval. <a href="https://developer.chrome.com/docs/devtools/network/reference/#save-as-har">Chrome HAR export instructions ↗</a></p>
+<div class="row"><button id="compare-clear" disabled>Clear comparison</button></div>
 <p id="compare-status" class="status" role="status">Load one file for each side.</p>
 <section id="compare-report" aria-label="Capture comparison results" hidden>
   <div id="compare-stats" class="stats"></div>

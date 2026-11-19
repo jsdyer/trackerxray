@@ -1,4 +1,5 @@
-import { domainOf, maxFileBytes, parseSite, readHar, summarize } from './har.mjs';
+import { readPageLoad } from './timing.mjs';
+import { domainOf, maxFileBytes, parseSite, summarize } from './har.mjs';
 
 const $ = id => document.getElementById(id);
 const number = new Intl.NumberFormat();
@@ -40,7 +41,7 @@ function clearCapture() {
   $('hosts').replaceChildren();
   $('detail-fields').replaceChildren();
   if ($('detail').open) $('detail').close();
-  status('Drop a HAR here or try the synthetic example.');
+  status('Open a HAR or inspect the resources this page has already loaded.');
 }
 
 function openResult(result, label) {
@@ -179,7 +180,7 @@ function renderRows() {
   }
 }
 
-const showNames = values => values.length ? values.join(', ') : 'None listed';
+const showNames = values => values.length ? values.join(', ') : data.source ? 'Unavailable in this measurement' : 'None listed';
 function inspect(row) {
   $('detail-title').textContent = row.host;
   const service = row.service ? el('a', row.service.name) : 'No match in the built-in list';
@@ -195,7 +196,7 @@ function inspect(row) {
     ['HTTP status', row.status == null ? 'Unavailable' : row.status === 0 ? 'No HTTP status recorded' : row.status],
     ['Response type', row.responseType || 'Unavailable'],
     ['Response bytes', row.size == null ? 'Unavailable' : `${bytes(row.size)} · ${row.bodySource}`],
-    ['Request body', row.hasPayload ? `${row.payloadType || 'Type unavailable'} · ${bytes(row.requestSize)}` : 'None listed'],
+    ['Request body', data.source ? 'Not exposed by browser timing' : row.hasPayload ? `${row.payloadType || 'Type unavailable'} · ${bytes(row.requestSize)}` : 'None listed'],
     ['Body field names', showNames(row.payloadNames)],
     ['Query parameter names', showNames(row.queryNames)],
     ['Request header names', showNames(row.requestHeaders)],
@@ -224,7 +225,7 @@ function applySite() {
   renderRows();
 }
 function download() {
-  const content = { format: 'trackerxray-host-summary-v1', comparisonSite: site, ...summarize(data.rows, site) };
+  const content = { format: 'trackerxray-host-summary-v1', source: data.source ?? 'Imported HAR', comparisonSite: site, ...summarize(data.rows, site) };
   const url = URL.createObjectURL(new Blob([JSON.stringify(content, null, 2)], { type: 'application/json' }));
   const link = el('a');
   link.href = url; link.download = 'trackerxray-summary.json'; link.click();
@@ -232,7 +233,7 @@ function download() {
 }
 function downloadRequests() {
   const content = {
-    format: 'trackerxray-request-metadata-v1',
+    format: 'trackerxray-request-metadata-v1', source: data.source ?? 'Imported HAR',
     comparisonSite: site,
     requests: matchedRows(),
   };
@@ -241,32 +242,20 @@ function downloadRequests() {
   link.href = url; link.download = 'trackerxray-requests.json'; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-function sample() {
+function inspectPage() {
   clearCapture();
-  const seed = Date.UTC(2024, 9, 3);
-  const paths = [
-    ['https://museum.example.ca/', 'document', 'GET', 24420, 72],
-    ['https://static.museum.example.ca/main.css', 'stylesheet', 'GET', 12420, 13],
-    ['https://media.example.net/gallery.jpg', 'image', 'GET', 145400, 31],
-    ['https://events.example.org/collect?utm_source=sample', 'xhr', 'POST', 178, 14],
-    ['https://events.example.org/telemetry', 'xhr', 'POST', 102, 26],
-    ['https://media.example.net/map.woff2', 'font', 'GET', 9520, 14],
-    ['https://flags.example.com/config', 'fetch', 'GET', 1220, 60],
-    ['https://museum.example.ca/opening-hours', 'fetch', 'GET', 640, 29],
-  ];
-  const entries = paths.map(([url, _resourceType, method, bodySize, time], i) => ({
-    startedDateTime: new Date(seed + i * 40).toISOString(), time, _resourceType,
-    request: { url, method, headers: [{ name: 'Accept' }], bodySize: method === 'POST' ? 17 : 0,
-      ...(method === 'POST' ? { postData: { mimeType: 'application/x-www-form-urlencoded', params: [{ name: 'event' }] } } : {}) },
-    response: { status: 200, bodySize, headers: [{ name: 'Content-Type' }], content: { type: 'document' } },
-    timings: { receive: time },
-  }));
-  openResult(readHar({ log: { entries } }), 'Synthetic museum capture');
+  try {
+    const capture = readPageLoad(performance, location.origin);
+    openResult(capture, 'This page’s measured load');
+    status(`${capture.rows.length} completed same-origin requests in this tab, including cached resources when recorded. Times run from request start through response end. Browser timing omits request methods, headers, cookies and body fields.`);
+  } catch (error) {
+    status(error.message, true);
+  }
 }
 
 $('choose').addEventListener('click', () => $('open').click());
 $('open').addEventListener('change', event => openFile(event.target.files[0]));
-$('sample').addEventListener('click', sample);
+$('measure').addEventListener('click', inspectPage);
 $('clear').addEventListener('click', clearCapture);
 $('export').addEventListener('click', download);
 $('export-requests').addEventListener('click', downloadRequests);
