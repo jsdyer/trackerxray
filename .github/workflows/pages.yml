@@ -37,7 +37,7 @@ jobs:
           python3 -m pip install playwright==1.62.0
           python3 -m playwright install --with-deps chromium
           python3 tests/browser_smoke.py
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
 
@@ -55,4 +55,4 @@ jobs:
     steps:
       - name: Publish GitHub Pages
         id: publish
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
