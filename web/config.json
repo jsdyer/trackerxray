@@ -1,0 +1,14 @@
+{
+  "pageSize": 40,
+  "comparisonPageSize": 30,
+  "waterfallRows": 80,
+  "maxEntries": 200000,
+  "maxFileMegabytes": 128,
+  "defaultMatchMode": "endpoint",
+  "documentedServices": {
+    "google-analytics.com": {"name":"Google Analytics","source":"https://developers.google.com/tag-platform/security/guides/csp#google_analytics"},
+    "googletagmanager.com": {"name":"Google Tag Manager","source":"https://developers.google.com/tag-platform/security/guides/csp"},
+    "clarity.ms": {"name":"Microsoft Clarity","source":"https://learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-csp"},
+    "cloudflareinsights.com": {"name":"Cloudflare Web Analytics","source":"https://developers.cloudflare.com/web-analytics/data-metrics/data-origin-and-collection/"}
+  }
+}

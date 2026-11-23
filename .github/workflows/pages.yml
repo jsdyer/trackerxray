@@ -1,6 +1,7 @@
 name: Build and publish to GitHub Pages
 
 on:
+  pull_request:
   push:
     branches: [main]
   workflow_dispatch:
@@ -34,12 +35,14 @@ jobs:
       - name: Verify the measured page load and real HAR imports
         run: |
           python3 -m pip install playwright==1.62.0
+          python3 -m playwright install --with-deps chromium
           python3 tests/browser_smoke.py
       - uses: actions/upload-pages-artifact@v4
         with:
           path: dist
 
   deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10

@@ -1,0 +1,13 @@
+{
+  "id":"trackerxray",
+  "title":"Tracker X-Ray",
+  "description":"Inspect HAR waterfalls, compare individual requests and create a reduced capture for sharing.",
+  "category":"security",
+  "tags":["HAR","privacy","network","requests","waterfall","comparison"],
+  "icon":"scan-search",
+  "url":"/trackerxray/",
+  "source":"https://github.com/jsdyer/trackerxray",
+  "hosting":"project",
+  "access":"browser",
+  "data_info":{"mode":"local","detail":"HAR files and measured page timing are processed locally; captured URLs are never replayed."}
+}

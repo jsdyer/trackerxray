@@ -45,22 +45,23 @@ function names(list) {
   return Array.isArray(list) ? [...new Set(list.map(x => x?.name).filter(x => typeof x === 'string' && NAME.test(x)))].sort() : [];
 }
 
-export function readHar(value) {
+export function readHar(value, options = {}) {
   const entries = value?.log?.entries;
   if (!Array.isArray(entries)) throw new Error('This JSON has no HAR log.entries array.');
-  if (entries.length > 200000) throw new Error('This capture has over 200,000 entries. Export a shorter capture.');
+  if (entries.length > (options.maxEntries || 200000)) throw new Error('This capture exceeds the configured entry limit. Export a shorter capture.');
   let earliest = Infinity;
   let skipped = 0;
   let site = '';
   let fallback = '';
   const rows = [];
-  for (const entry of entries) {
+  for (const [entryIndex, entry] of entries.entries()) {
     const request = entry?.request;
     const url = webURL(request?.url);
     if (!url) { skipped++; continue; }
     const host = url.hostname.toLowerCase().replace(/\.$/, '');
     const domain = domainOf(host);
-    const service = Object.hasOwn(documentedServices, domain) ? documentedServices[domain] : null;
+    const services = options.documentedServices || documentedServices;
+    const service = Object.hasOwn(services, domain) ? services[domain] : null;
     const response = entry.response || {};
     const post = request.postData;
     const requestHeaders = names(request.headers);
@@ -81,7 +82,7 @@ export function readHar(value) {
       (cookieNames.length || responseCookieNames.length
         || [...requestHeaders, ...responseHeaders].some(x => /^(?:set-)?cookie$/i.test(x))) && 'Cookie metadata present'].filter(Boolean);
     rows.push({
-      host, domain, service,
+      entryIndex, host, domain, service,
       method: typeof request.method === 'string' && /^[A-Z!#$%&'*+.^_`|~-]{1,25}$/i.test(request.method) ? request.method.toUpperCase() : 'Unknown',
       resource,
       status: Number.isInteger(response.status) && response.status >= 0 && response.status < 600 ? response.status : null,

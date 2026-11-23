@@ -1,9 +1,12 @@
 import { readPageLoad } from './timing.mjs';
+import { loadConfig } from './settings.mjs';
+import { drawWaterfall } from './waterfall.mjs';
 import { domainOf, maxFileBytes, parseSite, summarize } from './har.mjs';
 
 const $ = id => document.getElementById(id);
 const number = new Intl.NumberFormat();
-const pageSize = 40;
+const config = await loadConfig();
+const pageSize = config.pageSize;
 const el = (tag, content, className) => {
   const node = document.createElement(tag);
   if (content != null) node.textContent = content;
@@ -40,6 +43,7 @@ function clearCapture() {
   $('requests').replaceChildren();
   $('hosts').replaceChildren();
   $('detail-fields').replaceChildren();
+  $('waterfall-rows').replaceChildren();
   if ($('detail').open) $('detail').close();
   status('Open a HAR or inspect the resources this page has already loaded.');
 }
@@ -65,7 +69,7 @@ function openResult(result, label) {
 function openFile(file) {
   if (!file) return;
   clearCapture();
-  if (file.size > maxFileBytes) { status('This capture is larger than 128 MB. Export a shorter capture.', true); return; }
+  if (file.size > config.maxFileMegabytes * 1024 * 1024) { status(`This capture exceeds the configured ${config.maxFileMegabytes} MB limit. Export a shorter capture.`, true); return; }
   const current = sourceVersion;
   $('clear').hidden = false;
   status('Reading the capture locally…');
@@ -149,6 +153,7 @@ function matchedRows() {
 
 function renderRows() {
   const rows = matchedRows();
+  drawWaterfall(rows, config.waterfallRows, inspect);
   const chosen = domainOf(site);
   const pages = Math.max(1, Math.ceil(rows.length / pageSize));
   page = Math.min(page, pages - 1);

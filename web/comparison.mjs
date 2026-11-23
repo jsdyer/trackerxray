@@ -1,5 +1,7 @@
 import { maxFileBytes } from './har.mjs';
 import { compareCaptures } from './compare.mjs';
+import { compareRequests } from './advanced.mjs';
+import { loadConfig } from './settings.mjs';
 
 const $ = id => document.getElementById(`compare-${id}`);
 const sides = ['before', 'after'];
@@ -7,10 +9,12 @@ const labels = { before: 'Before', after: 'After' };
 const changes = { added: 'New domain', removed: 'Missing domain', count: 'Count changed', hosts: 'Hosts changed', unchanged: 'Unchanged' };
 const number = new Intl.NumberFormat();
 const signed = new Intl.NumberFormat(undefined, { signDisplay: 'exceptZero' });
-const pageSize = 30;
+const config = await loadConfig();
+const pageSize = config.comparisonPageSize;
 const hostLimit = 60;
 const captures = {};
-let worker, report, page = 0;
+let worker, report, page = 0, requestPage = 0, requestRows = [], salt = crypto.randomUUID();
+$('mode').value = config.defaultMatchMode;
 
 function element(tag, content, className) {
   const node = document.createElement(tag);
@@ -85,7 +89,13 @@ function update() {
   $('query').value = '';
   $('filter').value = 'changes';
   page = 0;
+  requestRows = report ? compareRequests(captures.before.rows, captures.after.rows) : [];
+  requestPage = 0;
   if (!report) return;
+  report.matchMode = $('mode').value;
+  report.matching = 'Method and URL identity; repeated matches are paired by occurrence order. Salted fingerprints apply only to this comparison. URL paths and query values are omitted.';
+  report.requests = requestRows;
+  renderRequests();
   const { before, after, delta, addedDomains, removedDomains } = report;
   const stats = [
     [`${number.format(before.requests)} → ${number.format(after.requests)}`, 'Recorded requests'],
@@ -113,6 +123,10 @@ function setCapture(side, capture, prefix = '') {
 
 function clear() {
   stopWorker();
+  salt = crypto.randomUUID();
+  requestRows = [];
+  $('request-rows').replaceChildren();
+  if($('detail').open)$('detail').close();
   for (const side of sides) {
     delete captures[side];
     $(side).value = '';
@@ -134,7 +148,7 @@ function load(side, file) {
     $(`${side}-label`).textContent = 'File could not be used';
     status(`${labels[side]} HAR: ${message}`, true);
   }
-  if (file.size > maxFileBytes) return fail('This capture is larger than 128 MB. Export a shorter capture.');
+  if (file.size > config.maxFileMegabytes * 1024 * 1024) return fail(`This capture exceeds the configured ${config.maxFileMegabytes} MB limit. Export a shorter capture.`);
   for (const name of sides) $(name).disabled = true;
   status(`Reading the ${labels[side]} HAR locally…`);
   try {
@@ -154,7 +168,7 @@ function load(side, file) {
       stopWorker();
       fail('The capture reader stopped. Try a smaller or newly exported HAR.');
     });
-    reader.postMessage({ file, compare: true });
+    reader.postMessage({ file, compare: true, mode: $('mode').value, salt });
   } catch {
     stopWorker();
     fail('The capture reader could not start. Reload this page and retry.');
@@ -176,3 +190,38 @@ $('clear').addEventListener('click', clear);
 $('export').addEventListener('click', download);
 $('prev').addEventListener('click', () => { page--; render(); });
 $('next').addEventListener('click', () => { page++; render(); });
+
+const value = input => input == null ? 'Unavailable' : String(input);
+const metric = (input, unit) => input == null ? 'Unavailable' : `${signed.format(Math.round(input * 100) / 100)} ${unit}`;
+const requestChanges = {added:'New', removed:'Missing', changed:'Changed', unchanged:'Unchanged'};
+function renderRequests(){
+  const query = $('request-query').value.trim().toLowerCase(), filter = $('request-filter').value;
+  const matches = requestRows.filter(row => (filter === 'all' || filter === 'changes' && row.change !== 'unchanged' || filter === row.change) && (!query || [row.host,row.method,row.fingerprint].some(text=>text.toLowerCase().includes(query))));
+  const pages = Math.max(1,Math.ceil(matches.length/pageSize));requestPage=Math.min(requestPage,pages-1);
+  $('request-count').textContent=`${number.format(matches.length)} of ${number.format(requestRows.length)} paired, new or missing requests. Differences use only measured values; unavailable data is not zero.`;
+  $('request-page').textContent=`Page ${requestPage+1} of ${pages}`;$('request-prev').disabled=requestPage===0;$('request-next').disabled=requestPage+1>=pages;
+  const rows=matches.slice(requestPage*pageSize,(requestPage+1)*pageSize).map(row=>{
+    const tr=element('tr'),identity=element('td');identity.append(element('strong',`${row.method} ${row.host}`),element('span',`${row.fingerprint.slice(0,12)} · occurrence ${row.occurrence}`,'meta'));
+    const details=element('td'),button=element('button','Compare details');button.type='button';button.addEventListener('click',()=>inspectRequest(row));details.append(button);
+    tr.append(identity,element('td',requestChanges[row.change],`request-${row.change}`),element('td',`${value(row.before?.status)} / ${value(row.after?.status)}`),element('td',metric(row.durationDelta,'ms')),element('td',metric(row.sizeDelta,'B')),details);return tr;
+  });
+  if(!rows.length){const tr=element('tr'),td=element('td','No requests match these filters.');td.colSpan=6;tr.append(td);rows.push(tr);}
+  $('request-rows').replaceChildren(...rows);
+}
+function inspectRequest(row){
+  $('detail-title').textContent=`${row.method} ${row.host}`;const content=$('detail-body');content.replaceChildren();
+  content.append(element('p',`Fingerprint ${row.fingerprint.slice(0,12)} · occurrence ${row.occurrence}. ${requestChanges[row.change]}. Repeated matching endpoints are paired by their order in each capture.`));
+  const dl=element('dl');
+  for(const [key,label] of [['status','HTTP status'],['duration','Duration (ms)'],['size','Response bytes'],['requestSize','Request bytes'],['responseType','Response MIME type'],['payloadType','Request MIME type'],['resource','Resource type']])dl.append(element('dt',label),element('dd',`${value(row.before?.[key])} / ${value(row.after?.[key])}`));
+  content.append(dl,element('h3','Timing phases: before / after'));
+  const phases=element('dl'),before=new Map(row.before?.phases||[]),after=new Map(row.after?.phases||[]);
+  for(const key of ['blocked','dns','connect','ssl','send','wait','receive'])phases.append(element('dt',key),element('dd',`${value(before.get(key))} / ${value(after.get(key))} ms`));
+  content.append(phases,element('h3','Field-name changes'));
+  const fields=element('dl'),labels={requestHeaders:'Request headers',responseHeaders:'Response headers',queryNames:'Query parameters',cookieNames:'Sent cookies',responseCookieNames:'Received cookies',payloadNames:'Form fields'};
+  for(const [key,change]of Object.entries(row.fields))fields.append(element('dt',labels[key]),element('dd',`Added: ${change.added.join(', ')||'none'}. Removed: ${change.removed.join(', ')||'none'}.`));
+  content.append(fields);$('detail').showModal();
+}
+$('mode').addEventListener('change',clear);
+for(const id of ['request-query','request-filter'])$(id).addEventListener('input',()=>{requestPage=0;renderRequests();});
+$('request-prev').addEventListener('click',()=>{requestPage--;renderRequests();});
+$('request-next').addEventListener('click',()=>{requestPage++;renderRequests();});

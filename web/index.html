@@ -1,12 +1,12 @@
 <!doctype html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#17201c">
-<meta name="description" content="Inspect a browser network capture locally. Map unexpected external requests, request metadata and timing.">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' blob:; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-src 'self'">
-<title>Tracker X-Ray · CoolCode</title><link rel="stylesheet" href="./style.css"><script src="./app.mjs" type="module"></script><script src="./comparison.mjs" type="module"></script>
+<meta name="description" content="Inspect a browser network capture locally. Sanitize HAR files, inspect network waterfalls and compare captured requests.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' blob: data:; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-src 'self'">
+<title>Tracker X-Ray · CoolCode</title><link rel="stylesheet" href="./style.css"><script src="./app.mjs" type="module"></script><script src="./comparison.mjs" type="module"></script><script src="./privacy.mjs" type="module"></script>
 <script defer src="/assets/tool-metrics.js" referrerpolicy="no-referrer"></script>
 </head><body>
-<header class="mast"><div class="wrap"><a href="../">CoolCode.ca</a><span>Network inspection</span></div></header>
+<header class="mast"><div class="wrap"><a href="https://coolcode.ca/">CoolCode.ca</a><span>Network inspection</span></div></header>
 <section class="hero"><div class="wrap hero-inner">
 <div><span class="eyebrow">Browser network forensics</span><h1>Tracker X-Ray</h1><p class="lede">Find the domains, cookies and request patterns behind the page you captured.</p></div>
 <div class="local"><strong>Your capture stays in this tab.</strong><p>Header, cookie and body values are omitted. Captured URLs are never opened and the raw HAR is never uploaded.</p></div>
@@ -17,12 +17,14 @@
 <div class="row"><button id="choose" class="primary">Choose HAR</button><input id="open" type="file" accept=".har,.json,application/json" hidden><button id="measure">Inspect this page’s load</button><button id="clear" hidden>Clear capture</button></div>
 </div><p id="status" class="status" role="status">Open a HAR or inspect the resources this page has already loaded.</p></section>
 <details class="box comparison" id="comparison"><summary>Compare two HAR captures</summary>
-<p class="muted">Compare how many requests each domain received in your two saved HAR files.</p>
+<p class="muted">Compare domains and individual recorded requests. No captured URL is fetched.</p>
+<label class="field" for="compare-mode">Request matching<select id="compare-mode"><option value="endpoint">Method + endpoint + query names (ignore query values)</option><option value="exact">Method + exact URL (include query values)</option></select></label>
+<p class="notes muted">Matching uses URLs only inside the local reader. Reports show an endpoint fingerprint, never the original path or query values. Repeated matches are paired by capture order, not by proof of the same transaction. Changing the mode clears both files.</p>
 <div class="grid">
   <div class="compare-slot"><label class="field" for="compare-before">Before HAR<input id="compare-before" type="file" accept=".har,.json,application/json" aria-describedby="compare-before-label"></label><p id="compare-before-label" class="meta">No file selected</p></div>
   <div class="compare-slot"><label class="field" for="compare-after">After HAR<input id="compare-after" type="file" accept=".har,.json,application/json" aria-describedby="compare-after-label"></label><p id="compare-after-label" class="meta">No file selected</p></div>
 </div>
-<p class="meta">To compare a consent choice, open Network in your browser’s developer tools, reload the same site and export a sanitized HAR. Clear the Network log, make the choice and record a second load over the same interval. <a href="https://developer.chrome.com/docs/devtools/network/reference/#save-as-har">Chrome HAR export instructions ↗</a></p>
+<p class="meta">To compare a consent choice, open Network in your browser’s developer tools, reload the same site and export a sanitized HAR. Clear the Network log, make the choice and record a second load over the same interval. <a href="https://developer.chrome.com/docs/devtools/network/reference/#save-as-har">Chrome HAR export instructions</a></p>
 <div class="row"><button id="compare-clear" disabled>Clear comparison</button></div>
 <p id="compare-status" class="status" role="status">Load one file for each side.</p>
 <section id="compare-report" aria-label="Capture comparison results" hidden>
@@ -36,7 +38,22 @@
   <p class="notes muted">Requests are grouped by registrable domain. Expand a domain to see host counts. The export includes domain names, hostnames and counts.</p>
   <div class="scroll" tabindex="0" role="region" aria-label="Domain comparison table"><table><thead><tr><th scope="col">Domain</th><th scope="col">Change</th><th scope="col" class="right">Before</th><th scope="col" class="right">After</th><th scope="col" class="right">Difference</th></tr></thead><tbody id="compare-rows"></tbody></table></div>
   <div class="row pager"><button id="compare-prev">Previous</button><span id="compare-page" class="meta" aria-live="polite"></span><button id="compare-next">Next</button></div>
+<section class="request-comparison" aria-label="Individual request comparison">
+<h3>Individual requests</h3>
+<div class="controls"><label class="field grow" for="compare-request-query">Find a host, method or fingerprint<input id="compare-request-query" type="search"></label><label class="field" for="compare-request-filter">Request changes<select id="compare-request-filter"><option value="changes">Changed, new or missing</option><option value="changed">Changed matches</option><option value="added">New requests</option><option value="removed">Missing requests</option><option value="all">All requests</option></select></label></div>
+<p id="compare-request-count" class="notes"></p>
+<div class="scroll" role="region" aria-label="Request comparison table" tabindex="0"><table><thead><tr><th>Request / fingerprint</th><th>Change</th><th>Status before / after</th><th>Duration difference</th><th>Size difference</th><th>Details</th></tr></thead><tbody id="compare-request-rows"></tbody></table></div>
+<div class="row pager"><button id="compare-request-prev">Previous requests</button><span id="compare-request-page" class="meta"></span><button id="compare-request-next">Next requests</button></div>
+</section>
 </section></details>
+<details class="box comparison" id="privacy"><summary>Make a sanitized HAR copy</summary>
+<p>Build a reduced HAR by keeping only known timing and request-metadata fields. All header, cookie, query and form values are replaced; body text, page titles, server IPs, comments and vendor metadata are removed. This also removes credentials inside headers that were not recognized by name.</p>
+<label class="field" for="privacy-file">HAR to sanitize<input id="privacy-file" type="file" accept=".har,.json,application/json"></label>
+<div class="privacy-options"><label><input id="privacy-paths" type="checkbox"> Keep original URL paths (can contain personal data or tokens)</label><label><input id="privacy-dates" type="checkbox"> Keep original request dates (otherwise shift the timeline to 1 January 2000)</label></div>
+<div class="row"><button id="privacy-run" disabled>Build sanitized copy</button><button id="privacy-download" disabled>Download sanitized HAR</button><button id="privacy-clear">Clear sanitizer</button></div>
+<p id="privacy-status" class="status" role="status">Choose a HAR to make a separate sanitized copy.</p><div id="privacy-report" aria-live="polite"></div>
+<p class="notes muted">A reduced capture is not anonymous: hosts, field names and activity patterns remain. Review the report and copy before sharing. The original file is unchanged. No data is uploaded.</p>
+</details>
 <section id="report" hidden>
 <div class="box"><div class="row between"><h2 id="capture-title">Capture overview</h2><button id="export">Export summary JSON</button></div>
 <div class="controls"><label class="field grow">Site to compare against<input id="site" type="text" placeholder="example.ca" maxlength="220" spellcheck="false"></label><button id="apply-site">Set site</button></div>
@@ -48,6 +65,7 @@
 <div class="controls"><label class="field">Request characteristic<select id="characteristic"><option value="">All requests</option><option value="signal">Review signals</option><option value="body">Request body</option><option value="cookies">Cookie metadata</option><option value="service">Documented service</option><option value="error">HTTP errors or no status</option></select></label><button id="export-requests">Export matched requests JSON</button></div>
 <p class="notes muted">The request export includes hostnames and field names. Review those before sharing it.</p>
 <p id="host-selection" class="notes" hidden></p>
+<details class="waterfall-panel" open><summary>Network waterfall</summary><p id="waterfall-summary" class="notes"></p><div id="waterfall-legend" class="waterfall-legend"></div><p class="notes muted">Times are relative to the earliest recorded request. TLS is part of Connect and is not added again. Grey portions lack a reported phase. An asterisk marks inconsistent phase totals; missing phases are not treated as zero. Overlap is request activity, not a connection count.</p><div id="waterfall-axis" class="meta waterfall-axis"></div><div id="waterfall-rows"></div></details>
 <div class="scroll"><table><thead><tr><th>Host</th><th>Request</th><th>Status</th><th class="right">Start / duration</th><th class="right">Response</th><th>Details</th></tr></thead><tbody id="requests"></tbody></table></div>
 <div class="row pager"><button id="prev">Previous</button><span id="page" class="meta"></span><button id="next">Next</button></div>
 <p class="notes muted">Documented service names and request signals help you decide which rows to inspect. A network request alone does not establish the purpose of a request or prove that clipboard or other personal data was collected.</p>
@@ -55,5 +73,6 @@
 <noscript>Enable JavaScript to parse files locally.</noscript></main>
 <dialog id="detail" aria-labelledby="detail-title"><form method="dialog"><div class="row between"><h2 id="detail-title"></h2><button>Close</button></div></form>
 <dl class="details" id="detail-fields"></dl></dialog>
+<dialog id="compare-detail" aria-labelledby="compare-detail-title"><form method="dialog"><div class="row between"><h2 id="compare-detail-title">Request comparison</h2><button>Close</button></div></form><div id="compare-detail-body"></div></dialog>
 <footer class="footer"><div class="wrap"><span>Tracker X-Ray · local HAR analysis</span><a href="https://developer.chrome.com/docs/devtools/network/reference/#save-as-har">Chrome HAR export</a><a href="https://github.com/jsdyer/trackerxray">Source code</a><a href="./vendor/TLDTS-LICENSE">Domain parser licence</a> <a href="https://coolcode.ca/report/?tool=trackerxray" referrerpolicy="no-referrer">Report an issue</a></div></footer>
 </body></html>
